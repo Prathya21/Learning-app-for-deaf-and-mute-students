@@ -1,8 +1,16 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from typing import List, Optional
 from app.services.isl_translation import translation_service
 
 router = APIRouter(prefix="/api", tags=["translation"])
+
+
+class VideoInfo(BaseModel):
+    word: str
+    found: bool
+    video_url: Optional[str] = None
+    video_file: Optional[str] = None
 
 
 class TextToISLRequest(BaseModel):
@@ -11,8 +19,8 @@ class TextToISLRequest(BaseModel):
 
 class TextToISLResponse(BaseModel):
     original_text: str
-    gloss_sequence: list[str]
-    videos: list[dict]
+    gloss_sequence: List[str]
+    videos: List[VideoInfo]
 
 
 @router.post("/translate/text-to-isl", response_model=TextToISLResponse)

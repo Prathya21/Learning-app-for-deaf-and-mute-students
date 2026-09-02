@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { api, ApiError } from './services/api';
+import ISLVideoPlayer from './components/ISLVideoPlayer';
+import HandTracker from './components/HandTracker';
 
 function App() {
   const [inputText, setInputText] = useState('');
@@ -71,32 +73,21 @@ function App() {
         </section>
 
         <section className="card">
-          <h2>ISL Video Sequence</h2>
+          <h2>ISL Video Player</h2>
           {result ? (
-            <div className="video-list">
-              {result.videos.length > 0 ? (
-                result.videos.map((video, index) => (
-                  <div key={index} className={`video-item ${video.found ? 'found' : 'not-found'}`}>
-                    <div>
-                      <div className="video-word">{video.word}</div>
-                      <span className={`video-status ${video.found ? 'found' : 'not-found'}`}>
-                        {video.found ? 'Video available' : 'Video not found'}
-                      </span>
-                    </div>
-                    {video.found && video.video_path && (
-                      <div className="video-path">{video.video_path}</div>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div className="output-area empty">No videos to display</div>
-              )}
-            </div>
+            <ISLVideoPlayer
+              videos={result.videos}
+              glossSequence={result.gloss_sequence}
+            />
           ) : (
-            <div className="output-area empty">Enter text and click Translate to see video sequence</div>
+            <div className="output-area empty">Enter text and click Translate to play ISL video sequence</div>
           )}
         </section>
       </div>
+
+      <section className="card">
+        <HandTracker />
+      </section>
 
       <section className="card">
         <h2>Future Modules</h2>

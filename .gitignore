@@ -43,3 +43,7 @@ coverage/
 data/videos/*.mp4
 data/videos/*.webm
 data/videos/*.mov
+backend/data/synthetic_landmarks/
+backend/data/include_subset/
+backend/models/
+*.npy
