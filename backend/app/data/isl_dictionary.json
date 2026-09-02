@@ -1,0 +1,17 @@
+{
+  "HELLO": "/data/videos/hello.mp4",
+  "THANK_YOU": "/data/videos/thank_you.mp4",
+  "PLEASE": "/data/videos/please.mp4",
+  "YES": "/data/videos/yes.mp4",
+  "NO": "/data/videos/no.mp4",
+  "STUDENT": "/data/videos/student.mp4",
+  "TEACHER": "/data/videos/teacher.mp4",
+  "LEARN": "/data/videos/learn.mp4",
+  "BOOK": "/data/videos/book.mp4",
+  "WATER": "/data/videos/water.mp4",
+  "GOOD": "/data/videos/good.mp4",
+  "BAD": "/data/videos/bad.mp4",
+  "HELP": "/data/videos/help.mp4",
+  "UNDERSTAND": "/data/videos/understand.mp4",
+  "QUESTION": "/data/videos/question.mp4"
+}
