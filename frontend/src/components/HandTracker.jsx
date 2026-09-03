@@ -215,7 +215,7 @@ function HandTracker() {
         
         // Run inference every INFERENCE_INTERVAL_FRAMES frames when buffer is full
         if (frameBufferRef.current.length === 64 && frameCountRef.current % 8 === 0) {
-          const frames = frameBufferRef.current.slice(); // Copy buffer
+          const frames = frameBufferRef.current.slice().map(f => Array.from(f));
           const result = await runInference(frames);
           
           if (result && result.confidence >= CONFIDENCE_THRESHOLD) {
@@ -251,10 +251,8 @@ function HandTracker() {
           setHands([]);
           setStatus('No Hands Detected');
         }
-      } 
-    }  
-      
-      catch (err) {
+      }
+      } catch (err) {
         console.error('Detection error:', err);
       }
     
@@ -410,15 +408,39 @@ function HandTracker() {
         </label>
       </div>
 
+      <div className="status-panel">
+        <div className="status-row">
+          <span className={`status-indicator ${status === 'Camera Off' ? 'off' : 'on'}`}></span>
+          <span>Camera: {status === 'Camera Off' ? 'OFF' : 'ACTIVE'}</span>
+        </div>
+        <div className="status-row">
+          <span className="status-indicator">{hands.length > 0 ? '✓' : '✗'}</span>
+          <span>Hands Detected: {hands.length}</span>
+        </div>
+        <div className="status-row">
+          <span className="status-indicator">{frameBufferRef.current.length > 0 ? '✓' : '✗'}</span>
+          <span>Frames Buffered: {frameBufferRef.current.length} / 64</span>
+        </div>
+        <div className="status-row">
+          <span className="status-indicator">{inferenceStatus === 'running' ? '⟳' : '✓'}</span>
+          <span>Inference: {inferenceStatus === 'running' ? 'PROCESSING...' : inferenceStatus === 'idle' ? 'READY' : inferenceStatus}</span>
+        </div>
+        <div className="status-row">
+          <span className="status-indicator">{inferenceResult ? '✓' : '✗'}</span>
+          <span>Backend: {inferenceResult ? 'CONNECTED' : 'PENDING'}</span>
+        </div>
+      </div>
+
       <div className="inference-display">
         {inferenceResult ? (
           <div className="inference-result">
             <div className="primary-gloss">
-              <span className="gloss-label">{language === 'english' ? 'Recognized:' : 'અભ્યાસ:'}</span>
-              <span className="gloss-text">{glossTranslation || inferenceResult.gloss}</span>
-              <span className="confidence-badge">{(inferenceResult.confidence * 100).toFixed(1)}%</span>
+              <span className="gloss-label">{language === 'english' ? 'RECOGNIZED SIGN:' : 'અભ્યાસ:'}</span>
+              <span className="gloss-text-large">{glossTranslation || inferenceResult.gloss}</span>
+              <span className="confidence-badge-large">{(inferenceResult.confidence * 100).toFixed(1)}%</span>
             </div>
             <div className="top-k">
+              <h4>{language === 'english' ? 'TOP PREDICTIONS:' : 'અગ્રણી ભવિષ્યવાણીઓ:'}</h4>
               {inferenceResult.topK.slice(0, 3).map((item, idx) => (
                 <div key={idx} className="top-k-item">
                   <span className="rank">#{idx + 1}</span>
@@ -473,7 +495,7 @@ function HandTracker() {
         <strong>Note:</strong> Hand landmark detection is not ISL gesture recognition.
         This module detects hand skeleton coordinates only.
         <br />
-        <span className="dev-badge">Development Model (Synthetic Data)</span>
+        <span className="dev-badge">Experimental demo model — trained on synthetic landmark data. Recognition results are not yet validated on real ISL.</span>
         <br />
         <span className="dev-badge">Confidence Threshold: {CONFIDENCE_THRESHOLD * 100}%</span>
       </p>

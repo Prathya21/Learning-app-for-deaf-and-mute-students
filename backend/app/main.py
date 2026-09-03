@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from app.api.routes import videos, translation, inference
 
 app = FastAPI(
@@ -15,6 +17,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for ISL videos
+video_dir = Path(__file__).parent.parent / "data" / "real_videos_canonical"
+app.mount("/static/videos", StaticFiles(directory=video_dir), name="videos")
 
 app.include_router(videos.router)
 app.include_router(translation.router)

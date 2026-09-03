@@ -178,14 +178,14 @@ function ISLVideoPlayer({ videos = [], glossSequence = [], onEnd }) {
     return (
       <div className="isl-video-player empty">
         <div className="player-empty-state">
-          <h3>No video assets available</h3>
-          <p>Video files for these signs have not been added yet.</p>
+          <h3>ISL GLOSS: [{currentGloss}]</h3>
+          <p>Video asset unavailable for this sign.</p>
           <div className="gloss-sequence-display">
             {glossSequence.map((gloss, i) => (
               <span key={i} className="gloss-badge unavailable">{gloss}</span>
             ))}
           </div>
-          <p className="hint">Add MP4 files to <code>backend/data/videos/</code> matching the video_file names in the dictionary.</p>
+          <p className="hint">Video assets not available for these signs in the current dataset.</p>
         </div>
       </div>
     );
@@ -214,6 +214,8 @@ function ISLVideoPlayer({ videos = [], glossSequence = [], onEnd }) {
           className="video-element"
           playsInline
           preload="metadata"
+          autoPlay
+          muted
         >
           Your browser does not support the video tag.
         </video>
