@@ -1,3 +1,3 @@
-from app.api.routes import videos, translation
+from app.api.routes import videos, translation, inference
 
-__all__ = ["videos", "translation"]
+__all__ = ["videos", "translation", "inference"]

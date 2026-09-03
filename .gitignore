@@ -48,3 +48,6 @@ backend/data/synthetic_landmarks/
 backend/data/include_subset/
 backend/models/
 *.npy
+# Real dataset assets
+backend/data/real_videos/
+backend/data/real_videos_canonical/

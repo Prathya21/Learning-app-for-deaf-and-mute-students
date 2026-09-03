@@ -14,6 +14,8 @@ import numpy as np
 import torch
 import tempfile
 from pathlib import Path
+import httpx
+from httpx import ASGITransport
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -540,6 +542,116 @@ class TestPipelineIntegration:
                 break
         
         assert True  # If we get here, pipeline works
+
+
+class TestInferenceAPI:
+    """Tests for the /api/inference/gesture endpoint."""
+
+    @pytest.fixture
+    def client(self):
+        from app.main import app
+        from httpx import ASGITransport, AsyncClient
+        
+        transport = ASGITransport(app=app)
+        return AsyncClient(transport=transport, base_url="http://test")
+
+    async def test_inference_model_info(self, client):
+        """Test the model info endpoint."""
+        response = await client.get("/api/inference/model-info")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["model_name"] == "SyntheticPipelineBaseline"
+        assert data["real_isl_recognition_valid"] is False
+        assert data["num_classes"] == 46
+
+    async def test_inference_gesture_valid_input(self, client):
+        """Test inference with valid random frames."""
+        import numpy as np
+        np.random.seed(42)
+        frames = np.random.randn(64, 126).astype(np.float32).tolist()
+        
+        response = await client.post(
+            "/api/inference/gesture",
+            json={"frames": frames}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "gloss" in data
+        assert "confidence" in data
+        assert "top_k" in data
+        assert len(data["top_k"]) == 5
+        assert "model_metadata" in data
+        assert data["model_metadata"]["real_isl_recognition_valid"] is False
+
+    async def test_inference_gesture_invalid_frame_length(self, client):
+        """Test inference with invalid frame length."""
+        frames = [[0.0] * 100]  # Wrong dimension
+        response = await client.post(
+            "/api/inference/gesture",
+            json={"frames": [frames]}
+        )
+        assert response.status_code == 400
+        assert "126" in response.json()["detail"]
+
+    async def test_inference_gesture_invalid_frame_length(self, client):
+        """Test inference with invalid frame length."""
+        frames = [[0.0] * 100]  # Wrong dimension
+        response = await client.post(
+            "/api/inference/gesture",
+            json={"frames": frames}
+        )
+        assert response.status_code == 400
+        detail = response.json()["detail"]
+        assert isinstance(detail, list) or "126" in str(detail)
+
+    async def test_inference_gesture_empty_frames(self, client):
+        """Test inference with empty frames."""
+        response = await client.post(
+            "/api/inference/gesture",
+            json={"frames": []}
+        )
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert isinstance(detail, list) or "frames" in str(detail).lower()
+
+    async def test_inference_gesture_too_many_frames(self, client):
+        """Test inference with too many frames."""
+        import numpy as np
+        frames = np.random.randn(201, 126).astype(np.float32).tolist()
+        response = await client.post(
+            "/api/inference/gesture",
+            json={"frames": frames}
+        )
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert isinstance(detail, list) or "frames" in str(detail).lower() or "200" in str(detail)
+
+    async def test_inference_output_schema(self, client):
+        """Test that inference output has correct schema."""
+        import numpy as np
+        np.random.seed(42)
+        frames = np.random.randn(64, 126).astype(np.float32).tolist()
+        
+        response = await client.post(
+            "/api/inference/gesture",
+            json={"frames": frames}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check required fields
+        assert isinstance(data["gloss"], str)
+        assert isinstance(data["confidence"], float)
+        assert 0 <= data["confidence"] <= 1
+        assert isinstance(data["top_k"], list)
+        assert len(data["top_k"]) == 5
+        for item in data["top_k"]:
+            assert "class_index" in item
+            assert "gloss" in item
+            assert "probability" in item
+            assert 0 <= item["probability"] <= 1
+        assert "model_metadata" in data
+        assert data["model_metadata"]["real_isl_recognition_valid"] is False
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 
 const HAND_CONNECTIONS = [
   [0, 1], [1, 2], [2, 3], [3, 4],
@@ -9,32 +10,118 @@ const HAND_CONNECTIONS = [
   [0, 17]
 ];
 
+const CONFIDENCE_THRESHOLD = 0.3;
+const SMOOTHING_WINDOW = 5;
+const INFERENCE_INTERVAL_FRAMES = 8;
+
+const GLOSS_TO_LANGUAGE = {
+  HELLO: { english: 'Hello', gujarati: 'નમસ્તે' },
+  THANK_YOU: { english: 'Thank you', gujarati: 'આભાર' },
+  PLEASE: { english: 'Please', gujarati: 'કૃપા કરીને' },
+  YES: { english: 'Yes', gujarati: 'હા' },
+  NO: { english: 'No', gujarati: 'ના' },
+  STUDENT: { english: 'Student', gujarati: 'વિદ્યાર્થી' },
+  TEACHER: { english: 'Teacher', gujarati: 'શિક્ષક' },
+  LEARN: { english: 'Learn', gujarati: 'શીખવું' },
+  BOOK: { english: 'Book', gujarati: 'પુસ્તક' },
+  WATER: { english: 'Water', gujarati: 'પાણી' },
+  GOOD: { english: 'Good', gujarati: 'સારું' },
+  BAD: { english: 'Bad', gujarati: 'ખરાબ' },
+  HELP: { english: 'Help', gujarati: 'મદદ' },
+  UNDERSTAND: { english: 'Understand', gujarati: 'સમજવું' },
+  QUESTION: { english: 'Question', gujarati: 'પ્રશ્ન' },
+  READ: { english: 'Read', gujarati: 'વાંચવા' },
+  WRITE: { english: 'Write', gujarati: 'લખવા' },
+  WHAT: { english: 'What', gujarati: 'શું' },
+  WHERE: { english: 'Where', gujarati: 'ક્યાં' },
+  HOW: { english: 'How', gujarati: 'કેવી રીતે' },
+  GOODBYE: { english: 'Goodbye', gujarati: 'અવજો' },
+  SORRY: { english: 'Sorry', gujarati: 'મફત કરજો' },
+  OKAY: { english: 'Okay', gujarati: 'ઠીક છે' },
+  ME: { english: 'Me', gujarati: 'મને' },
+  YOU: { english: 'You', gujarati: 'તમે' },
+  HE: { english: 'He', gujarati: 'તે (પુરુષ)' },
+  SHE: { english: 'She', gujarati: 'તે (સ્ત્રી)' },
+  MOTHER: { english: 'Mother', gujarati: 'માતા' },
+  FATHER: { english: 'Father', gujarati: 'પિતા' },
+  BROTHER: { english: 'Brother', gujarati: 'ભાઈ' },
+  SISTER: { english: 'Sister', gujarati: 'બહેન' },
+  FRIEND: { english: 'Friend', gujarati: 'મિત્ર' },
+  SCHOOL: { english: 'School', gujarati: 'શાળા' },
+  HOME: { english: 'Home', gujarati: 'ઘર' },
+  HOSPITAL: { english: 'Hospital', gujarati: 'હોспи્ટલ' },
+  MARKET: { english: 'Market', gujarati: 'બજાર' },
+  EAT: { english: 'Eat', gujarati: 'ખાવું' },
+  DRINK: { english: 'Drink', gujarati: 'પીવું' },
+  FOOD: { english: 'Food', gujarati: 'ખાણું' },
+  TEA: { english: 'Tea', gujarati: 'ચા' },
+  COME: { english: 'Come', gujarati: 'આવવું' },
+  GO: { english: 'Go', gujarati: 'જાવું' },
+  SIT: { english: 'Sit', gujarati: 'બેસવા' },
+  STAND: { english: 'Stand', gujarati: 'ઉભું રહેવું' },
+  WHEN: { english: 'When', gujarati: 'ક્યારે' },
+  TODAY: { english: 'Today', gujarati: 'આજ' }
+};
+
+const API_URL = '/api/inference/gesture';
+
 function HandTracker() {
+  const { language, setLanguage } = useTranslation();
   const [status, setStatus] = useState('Camera Off');
   const [hands, setHands] = useState([]);
   const [error, setError] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [inferenceResult, setInferenceResult] = useState(null);
+  const [predictionHistory, setPredictionHistory] = useState([]);
+  const [inferenceStatus, setInferenceStatus] = useState('idle');
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const handLandmarkerRef = useRef(null);
   const animationRef = useRef(null);
   const streamRef = useRef(null);
-  const lastDebugUpdate = useRef(0);
+  const frameBufferRef = useRef([]);
+  const frameCountRef = useRef(0);
+  const lastInferenceTimeRef = useRef(0);
+  const smoothingBufferRef = useRef([]);
+  const lastGlossRef = useRef(null);
 
   const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
+  const toCanonicalFrame = useCallback((results) => {
+    const frame = new Float32Array(126);
+    
+    // LEFT hand (indices 0-62)
+    const leftHand = results.landmarks.find(h => h.handedness === 'Left');
+    if (leftHand) {
+      leftHand.landmarks.forEach((lm, i) => {
+        frame[i * 3] = lm.x;
+        frame[i * 3 + 1] = lm.y;
+        frame[i * 3 + 2] = lm.z;
+      });
+    }
+    // RIGHT hand (indices 63-125)
+    const rightHand = results.landmarks.find(h => h.handedness === 'Right');
+    if (rightHand) {
+      rightHand.landmarks.forEach((lm, i) => {
+        frame[63 + i * 3] = lm.x;
+        frame[63 + i * 3 + 1] = lm.y;
+        frame[63 + i * 3 + 2] = lm.z;
+      });
+    }
+    return frame;
+  }, []);
+
   const drawLandmarks = useCallback((ctx, landmarks, videoWidth, videoHeight) => {
     ctx.save();
-    ctx.scale(1, 1);
-
+    
     landmarks.forEach((hand, handIndex) => {
       const color = handIndex === 0 ? '#00FF00' : '#FF6B00';
-
+      
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
-
+      
       HAND_CONNECTIONS.forEach(([from, to]) => {
         const p1 = hand[from];
         const p2 = hand[to];
@@ -44,7 +131,7 @@ function HandTracker() {
         }
       });
       ctx.stroke();
-
+      
       ctx.fillStyle = color;
       hand.forEach(point => {
         if (point) {
@@ -54,8 +141,34 @@ function HandTracker() {
         }
       });
     });
-
+    
     ctx.restore();
+  }, []);
+
+  const runInference = useCallback(async (frames) => {
+    if (inferenceStatus === 'running') return;
+    setInferenceStatus('running');
+    
+    try {
+      const response = await fetch('/api/inference/gesture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frames })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Inference failed');
+      }
+      
+      const result = await response.json();
+      return result;
+    } catch (err) {
+      console.error('Inference error:', err);
+      return null;
+    } finally {
+      setInferenceStatus('idle');
+    }
   }, []);
 
   const processFrame = useCallback(async () => {
@@ -63,62 +176,102 @@ function HandTracker() {
       animationRef.current = requestAnimationFrame(processFrame);
       return;
     }
-
+    
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-
+    
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
+    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
+    
     try {
       const results = handLandmarkerRef.current.detectForVideo(video, performance.now());
-
+      
       if (results.landmarks && results.landmarks.length > 0) {
         const detectedHands = results.landmarks.map((landmarks, i) => ({
           hand: results.handedness?.[i]?.[0]?.categoryName || (i === 0 ? 'Right' : 'Left'),
           confidence: results.handedness?.[i]?.[0]?.score || 1.0,
-          landmarks: landmarks.map(p => ({
-            x: p.x,
-            y: p.y,
-            z: p.z
-          }))
+          landmarks: landmarks.map(p => ({ x: p.x, y: p.y, z: p.z }))
         }));
-
+        
         setHands(detectedHands);
         setStatus(`${detectedHands.length} Hand${detectedHands.length !== 1 ? 's' : ''} Detected`);
-
+        
         drawLandmarks(ctx, results.landmarks, canvas.width, canvas.height);
-
-        const now = Date.now();
-        if (showDebug && now - lastDebugUpdate.current > 500) {
-          lastDebugUpdate.current = now;
+        
+        // Convert to canonical frame
+        const canonicalFrame = toCanonicalFrame(results);
+        
+        // Add to ring buffer
+        frameBufferRef.current.push(canonicalFrame);
+        if (frameBufferRef.current.length > 64) {
+          frameBufferRef.current.shift();
         }
-      } else {
-        setHands([]);
-        setStatus('No Hands Detected');
+        
+        frameCountRef.current++;
+        
+        // Run inference every INFERENCE_INTERVAL_FRAMES frames when buffer is full
+        if (frameBufferRef.current.length === 64 && frameCountRef.current % 8 === 0) {
+          const frames = frameBufferRef.current.slice(); // Copy buffer
+          const result = await runInference(frames);
+          
+          if (result && result.confidence >= CONFIDENCE_THRESHOLD) {
+            // Temporal smoothing: add to buffer
+            smoothingBufferRef.current.push(result.gloss);
+            if (smoothingBufferRef.current.length > SMOOTHING_WINDOW) {
+              smoothingBufferRef.current.shift();
+            }
+            
+            // Majority vote for smoothing
+            const glossCounts = {};
+            smoothingBufferRef.current.forEach(g => {
+              glossCounts[g] = (glossCounts[g] || 0) + 1;
+            });
+            const smoothedGloss = Object.entries(glossCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+            
+            if (smoothedGloss !== lastGlossRef.current) {
+              lastGlossRef.current = smoothedGloss;
+              setInferenceResult({
+                gloss: smoothedGloss,
+                confidence: result.confidence,
+                topK: result.topK,
+                modelMetadata: result.modelMetadata
+              });
+            }
+          }
+          
+          const now = Date.now();
+          if (showDebug && now - lastDebugUpdate.current > 500) {
+            lastDebugUpdate.current = now;
+          }
+        } else {
+          setHands([]);
+          setStatus('No Hands Detected');
+        }
+      } 
+    }  
+      
+      catch (err) {
+        console.error('Detection error:', err);
       }
-    } catch (err) {
-      console.error('Detection error:', err);
-    }
-
-    animationRef.current = requestAnimationFrame(processFrame);
-  }, [drawLandmarks, showDebug]);
+    
+      animationRef.current = requestAnimationFrame(processFrame);
+    }, [toCanonicalFrame, drawLandmarks, showDebug, inferenceStatus]);
 
   const initHandLandmarker = useCallback(async () => {
     setStatus('Initializing Hand Tracker...');
     setError(null);
-
+    
     try {
       const { HandLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
-
+      
       const vision = await FilesetResolver.forVisionTasks(
         'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
       );
-
+      
       const handLandmarker = await HandLandmarker.createFromOptions(vision, {
         baseOptions: {
           modelAssetPath: MODEL_URL,
@@ -130,7 +283,7 @@ function HandTracker() {
         minHandPresenceConfidence: 0.5,
         minTrackingConfidence: 0.5
       });
-
+      
       handLandmarkerRef.current = handLandmarker;
       setStatus('No Hands Detected');
       processFrame();
@@ -148,7 +301,7 @@ function HandTracker() {
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
         audio: false
       });
-
+      
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -185,6 +338,8 @@ function HandTracker() {
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     }
     setHands([]);
+    setInferenceResult(null);
+    setPredictionHistory([]);
     setStatus('Camera Off');
   }, []);
 
@@ -198,6 +353,10 @@ function HandTracker() {
     };
   }, [stopCamera]);
 
+  // Mirror fix: MediaPipe landmarks are already in camera coordinate space
+  // The video is mirrored via CSS, but MediaPipe landmarks are already in the correct coordinate space
+  // No additional mirror transformation needed for landmarks
+
   if (error) {
     return (
       <div className="hand-tracker error">
@@ -209,12 +368,19 @@ function HandTracker() {
     );
   }
 
+  const glossTranslation = useMemo(() => {
+    if (!inferenceResult?.gloss) return null;
+    const translation = GLOSS_TO_LANGUAGE[inferenceResult.gloss];
+    return translation ? translation[language] : inferenceResult.gloss;
+  }, [inferenceResult, language]);
+
   return (
     <div className="hand-tracker">
       <div className="tracker-header">
         <h2>Live Hand Tracking</h2>
-        <div className={`status-display ${status === 'Camera Off' ? 'off' : status.includes('Error') ? 'error' : ''}`}>
+        <div className={`status-display ${status === 'Camera Off' ? 'off' : status.includes('Error') ? 'error' : inferenceStatus === 'running' ? 'running' : ''}`}>
           {status}
+          {inferenceStatus === 'running' && <span className="inference-indicator">🔄 Inferring...</span>}
         </div>
       </div>
 
@@ -236,6 +402,45 @@ function HandTracker() {
           />
           Show Landmark Data
         </label>
+        <label className="language-toggle">
+          <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+            <option value="english">English</option>
+            <option value="gujarati">ગુજરાતી</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="inference-display">
+        {inferenceResult ? (
+          <div className="inference-result">
+            <div className="primary-gloss">
+              <span className="gloss-label">{language === 'english' ? 'Recognized:' : 'અભ્યાસ:'}</span>
+              <span className="gloss-text">{glossTranslation || inferenceResult.gloss}</span>
+              <span className="confidence-badge">{(inferenceResult.confidence * 100).toFixed(1)}%</span>
+            </div>
+            <div className="top-k">
+              {inferenceResult.topK.slice(0, 3).map((item, idx) => (
+                <div key={idx} className="top-k-item">
+                  <span className="rank">#{idx + 1}</span>
+                  <span className="gloss">
+                    {GLOSS_TO_LANGUAGE[item.gloss]?.[language] || item.gloss}
+                  </span>
+                  <span className="probability">{(item.probability * 100).toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="inference-placeholder">
+            {inferenceStatus === 'running' ? (
+              <span>🔄 Running inference...</span>
+            ) : hands.length > 0 ? (
+              <span>Show hands clearly for recognition</span>
+            ) : (
+              <span>No hands detected</span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="video-wrapper">
@@ -267,6 +472,10 @@ function HandTracker() {
       <p className="tracker-note">
         <strong>Note:</strong> Hand landmark detection is not ISL gesture recognition.
         This module detects hand skeleton coordinates only.
+        <br />
+        <span className="dev-badge">Development Model (Synthetic Data)</span>
+        <br />
+        <span className="dev-badge">Confidence Threshold: {CONFIDENCE_THRESHOLD * 100}%</span>
       </p>
     </div>
   );

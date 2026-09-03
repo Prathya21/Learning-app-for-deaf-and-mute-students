@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import videos, translation
+from app.api.routes import videos, translation, inference
 
 app = FastAPI(
     title="EduSign Backend",
@@ -18,6 +18,7 @@ app.add_middleware(
 
 app.include_router(videos.router)
 app.include_router(translation.router)
+app.include_router(inference.router)
 
 
 @app.get("/health")

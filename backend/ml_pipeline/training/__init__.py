@@ -235,7 +235,6 @@ def create_scheduler(optimizer: optim.Optimizer, config: TrainingConfig):
             mode='max',
             factor=config.scheduler_factor,
             patience=config.scheduler_patience,
-            verbose=True,
         )
     elif config.scheduler.lower() == "cosine":
         return optim.lr_scheduler.CosineAnnealingLR(
@@ -490,9 +489,9 @@ def train(
     # Load best model
     best_path = checkpoint_dir / "best_model.pt"
     if best_path.exists():
-        checkpoint = torch.load(best_path, map_location=device)
+        checkpoint = torch.load(best_path, map_location=device, weights_only=False)
         model.load_state_dict(checkpoint['model_state_dict'])
-        print(f"Loaded best model from epoch {checkpoint['metadata'].epoch}")
+        print(f"Loaded best model from epoch {checkpoint['metadata']['epoch']}")
     
     return model, metadata
 
