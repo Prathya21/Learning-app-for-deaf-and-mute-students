@@ -1,0 +1,186 @@
+{
+  "HELLO": {
+    "english": "Hello",
+    "gujarati": "નમસ્તે"
+  },
+  "THANK_YOU": {
+    "english": "Thank you",
+    "gujarati": "આભાર"
+  },
+  "PLEASE": {
+    "english": "Please",
+    "gujarati": "કૃપા કરીને"
+  },
+  "YES": {
+    "english": "Yes",
+    "gujarati": "હા"
+  },
+  "NO": {
+    "english": "No",
+    "gujarati": "ના"
+  },
+  "STUDENT": {
+    "english": "Student",
+    "gujarati": "વિદ્યાર્થી"
+  },
+  "TEACHER": {
+    "english": "Teacher",
+    "gujarati": "શિક્ષક"
+  },
+  "LEARN": {
+    "english": "Learn",
+    "gujarati": "શીખવું"
+  },
+  "BOOK": {
+    "english": "Book",
+    "gujarati": "પુસ્તક"
+  },
+  "WATER": {
+    "english": "Water",
+    "gujarati": "પાણી"
+  },
+  "GOOD": {
+    "english": "Good",
+    "gujarati": "સારું"
+  },
+  "BAD": {
+    "english": "Bad",
+    "gujarati": "ખરાબ"
+  },
+  "HELP": {
+    "english": "Help",
+    "gujarati": "મદદ"
+  },
+  "UNDERSTAND": {
+    "english": "Understand",
+    "gujarati": "સમજવું"
+  },
+  "QUESTION": {
+    "english": "Question",
+    "gujarati": "પ્રશ્ન"
+  },
+  "READ": {
+    "english": "Read",
+    "gujarati": "વાંચવા"
+  },
+  "WRITE": {
+    "english": "Write",
+    "gujarati": "લખવા"
+  },
+  "WHAT": {
+    "english": "What",
+    "gujarati": "શું"
+  },
+  "WHERE": {
+    "english": "Where",
+    "gujarati": "ક્યાં"
+  },
+  "HOW": {
+    "english": "How",
+    "gujarati": "કેવી રીતે"
+  },
+  "GOODBYE": {
+    "english": "Goodbye",
+    "gujarati": "અવજો"
+  },
+  "SORRY": {
+    "english": "Sorry",
+    "gujarati": "મફત કરજો"
+  },
+  "OKAY": {
+    "english": "Okay",
+    "gujarati": "ઠીક છે"
+  },
+  "ME": {
+    "english": "Me",
+    "gujarati": "મને"
+  },
+  "YOU": {
+    "english": "You",
+    "gujarati": "તમે"
+  },
+  "HE": {
+    "english": "He",
+    "gujarati": "તે (પુરુષ)"
+  },
+  "SHE": {
+    "english": "She",
+    "gujarati": "તે (સ્ત્રી)"
+  },
+  "MOTHER": {
+    "english": "Mother",
+    "gujarati": "માતા"
+  },
+  "FATHER": {
+    "english": "Father",
+    "gujarati": "પિતા"
+  },
+  "BROTHER": {
+    "english": "Brother",
+    "gujarati": "ભાઈ"
+  },
+  "SISTER": {
+    "english": "Sister",
+    "gujarati": "બહેન"
+  },
+  "FRIEND": {
+    "english": "Friend",
+    "gujarati": "મિત્ર"
+  },
+  "SCHOOL": {
+    "english": "School",
+    "gujarati": "શાળા"
+  },
+  "HOME": {
+    "english": "Home",
+    "gujarati": "ઘર"
+  },
+  "HOSPITAL": {
+    "english": "Hospital",
+    "gujarati": "હોспи્ટલ"
+  },
+  "MARKET": {
+    "english": "Market",
+    "gujarati": "બજાર"
+  },
+  "EAT": {
+    "english": "Eat",
+    "gujarati": "ખાવું"
+  },
+  "DRINK": {
+    "english": "Drink",
+    "gujarati": "પીવું"
+  },
+  "FOOD": {
+    "english": "Food",
+    "gujarati": "ખાણું"
+  },
+  "TEA": {
+    "english": "Tea",
+    "gujarati": "ચા"
+  },
+  "COME": {
+    "english": "Come",
+    "gujarati": "આવવું"
+  },
+  "GO": {
+    "english": "Go",
+    "gujarati": "જાવું"
+  },
+  "SIT": {
+    "english": "Sit",
+    "gujarati": "બેસવા"
+  },
+  "STAND": {
+    "english": "Stand",
+    "gujarati": "ઉભું રહેવું"
+  },
+  "WHEN": {
+    "english": "When",
+    "gujarati": "ક્યારે"
+  },
+  "TODAY": {
+    "english": "Today",
+    "gujarati": "આજ"
+  }
+}
